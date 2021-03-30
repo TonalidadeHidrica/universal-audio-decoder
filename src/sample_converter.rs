@@ -45,8 +45,16 @@ where
         // TODO is saturating_sub correct?
         let remove_len = sample_index.saturating_sub(self.input_front_sample_index) as usize
             * self.channels as usize;
-        self.input_samples_queue
-            .drain(..self.input_samples_queue.len().min(remove_len));
+        let queue_len = self.input_samples_queue.len();
+        self.input_samples_queue.drain(..queue_len.min(remove_len));
+
+        // In order to prevent move...
+        // self.source.dropping(remove_len.saturating_sub(queue_len));
+        let drop_len = remove_len.saturating_sub(queue_len);
+        if drop_len > 0 {
+            self.source.nth(drop_len - 1);
+        }
+
         self.input_front_sample_index = sample_index;
     }
 
@@ -102,7 +110,18 @@ where
             let int = next_index.trunc() as u64;
             let fract = next_index.fract() as f32;
             self.discard_before(int);
+            // println!(
+            //     "discard=> {:6}        {:?}",
+            //     self.input_front_sample_index, self.input_samples_queue,
+            // );
             self.append_until(int + 2);
+            // println!(
+            //     "{:6} => {:6} {:6.2} {:?}",
+            //     self.output_next_sample_index,
+            //     self.input_front_sample_index,
+            //     next_index,
+            //     self.input_samples_queue,
+            // );
             for i in 0..self.channels {
                 let next = self.get(int, i) * (1.0 - fract) + self.get(int + 1, i) * fract;
                 self.output_samples_queue.push_back(next);
