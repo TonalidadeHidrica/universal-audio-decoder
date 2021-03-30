@@ -110,18 +110,7 @@ where
             let int = next_index.trunc() as u64;
             let fract = next_index.fract() as f32;
             self.discard_before(int);
-            // println!(
-            //     "discard=> {:6}        {:?}",
-            //     self.input_front_sample_index, self.input_samples_queue,
-            // );
             self.append_until(int + 2);
-            // println!(
-            //     "{:6} => {:6} {:6.2} {:?}",
-            //     self.output_next_sample_index,
-            //     self.input_front_sample_index,
-            //     next_index,
-            //     self.input_samples_queue,
-            // );
             for i in 0..self.channels {
                 let next = self.get(int, i) * (1.0 - fract) + self.get(int + 1, i) * fract;
                 self.output_samples_queue.push_back(next);
