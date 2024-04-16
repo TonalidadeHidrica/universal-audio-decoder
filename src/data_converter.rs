@@ -1,5 +1,8 @@
+// Probably copied from `RustAudio/rodio/src/conversions/sample.rs`
+// Why did I copy & pasted instead of directly depending on it?
+
 use super::seek::{SeekResult, Seekable};
-use cpal::Sample as CpalSample;
+use cpal::{FromSample, Sample as CpalSample};
 use rodio::Sample;
 use std::marker::PhantomData;
 
@@ -25,19 +28,27 @@ impl<I, O> DataConverter<I, O> {
     pub fn into_inner(self) -> I {
         self.input
     }
+
+    /// get mutable access to the iterator
+    #[inline]
+    pub fn inner_mut(&mut self) -> &mut I {
+        &mut self.input
+    }
 }
 
 impl<I, O> Iterator for DataConverter<I, O>
 where
     I: Iterator,
-    I::Item: Sample + CpalSample,
-    O: Sample + CpalSample,
+    I::Item: Sample,
+    O: FromSample<I::Item> + Sample + CpalSample,
+    // In the future version of rodio, Sample: CpalSample
+    // so constraints on CpalSample can be removed
 {
     type Item = O;
 
     #[inline]
     fn next(&mut self) -> Option<O> {
-        self.input.next().map(|s| CpalSample::from(&s))
+        self.input.next().map(|s| CpalSample::from_sample(s))
     }
 
     #[inline]
@@ -49,8 +60,8 @@ where
 impl<I, O> ExactSizeIterator for DataConverter<I, O>
 where
     I: ExactSizeIterator,
-    I::Item: Sample + CpalSample,
-    O: Sample + CpalSample,
+    I::Item: Sample,
+    O: FromSample<I::Item> + Sample + CpalSample,
 {
 }
 
